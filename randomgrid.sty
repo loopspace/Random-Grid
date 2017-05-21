@@ -1,0 +1,90 @@
+\ProvidesPackage{randomgrid}
+\usetikzlibrary{shapes.geometric}
+
+% Boolean to decide whether or not to include the red square
+\newif\ifshgr@odd
+\tikzset{
+  square/.style={
+    rectangle,
+    fill=#1,
+    anchor=south,
+    minimum size=\pgfkeysvalueof{/tikz/matrix of shapes options/shape size},
+  },
+  triangle/.style={
+    isosceles triangle,
+    isosceles triangle apex angle=60,
+    rotate=90,
+    fill=#1,
+    anchor=west,
+    minimum size=\pgfkeysvalueof{/tikz/matrix of shapes options/shape size},
+  },
+  matrix of shapes/.style={
+%    execute at begin cell=\shgr@cell,
+    execute at empty cell=\shgr@generate,
+    every matrix/.style={initialise shapes},
+    matrix of shapes options,
+  },
+  initialise shapes/.code={
+    \shgr@init
+  },
+  matrix of shapes options/.is family,
+  matrix of shapes options/.unknown/.code={
+    \let\shgr@searchname=\pgfkeyscurrentname
+    \pgfkeysalso{%
+      /tikz/\shgr@searchname=#1%
+    }
+  },
+  matrix of shapes options,
+  rows/.initial=4,
+  columns/.initial=5,
+  odd one out/.is if=shgr@odd,
+  shape size/.initial=.5cm,
+}
+
+\def\shgr@init{%
+  \pgfkeysgetvalue{/tikz/matrix of shapes options/rows}{\shgr@m}%
+  \pgfkeysgetvalue{/tikz/matrix of shapes options/columns}{\shgr@n}%
+  \pgfmathtruncatemacro{\shgr@mn}{\shgr@m * \shgr@n - 1}%
+  \pgfmathtruncatemacro{\shgr@m}{\shgr@m - 1}%
+  \pgfmathtruncatemacro{\shgr@n}{\shgr@n - 1}%
+  \foreach \shgr@i in {0,...,\shgr@m} {%
+    \foreach \shgr@j in {0,...,\shgr@n} {%
+      \pgfmathtruncatemacro{\shgr@k}{\shgr@i * (\shgr@n + 1) +         \shgr@j}%
+      \pgfmathparse{Mod(\shgr@k,2) ? "square=black" : "triangle=red"}%
+      \expandafter\xdef\csname shgr@grid.\shgr@k\endcsname{\pgfmathresult}%
+    }%
+  }%
+  \ifshgr@odd
+  \expandafter\xdef\csname shgr@grid.1\endcsname{square=red}%
+  \fi
+}
+
+\def\shgr@cell{%
+  \pgfmathtruncatemacro{\shgr@k}{(\pgfmatrixcurrentrow - 1) * (\shgr@n + 1) + (\pgfmatrixcurrentcolumn - 1)}%
+  % Do the Knuth shuffle!
+  \pgfmathrandominteger{\shgr@l}{\shgr@k}{\shgr@mn}%
+  \edef\shgr@temp{%
+    \noexpand\node[\csname shgr@grid.\shgr@l\endcsname] {};%
+  }%
+  \shgr@temp
+  \expandafter\xdef\csname shgr@grid.\shgr@l\endcsname{\csname shgr@grid.\shgr@k\endcsname}%
+}
+
+\newcommand\shgr@generate{%
+  \pgfkeysgetvalue{/tikz/matrix of shapes options/rows}{\shgr@m}%
+  \pgfkeysgetvalue{/tikz/matrix of shapes options/columns}{\shgr@n}%
+  \def\shgr@temp{}%
+  \foreach \shgr@i in {1,...,\shgr@m} {%
+    \foreach \shgr@j in {2,...,\shgr@n} {%
+      \expandafter\gdef\expandafter\shgr@temp\expandafter{\shgr@temp\shgr@cell\pgfmatrixnextcell}%
+    }%
+    \ifx\shgr@i\shgr@m
+      \expandafter\gdef\expandafter\shgr@temp\expandafter{\shgr@temp\shgr@cell}%
+    \else
+      \expandafter\gdef\expandafter\shgr@temp\expandafter{\shgr@temp\shgr@cell\\}%
+    \fi
+  }%
+  \shgr@temp
+}
+
+\endinput
